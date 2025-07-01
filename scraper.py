@@ -1,6 +1,6 @@
 import requests
 
-# Paste your SerpAPI key here
+# 🔑 Add your real API key here or from environment variable
 SERP_API_KEY = "a74c9bfa042543ea769b366227147a51b5487933833d9b3e68956136f7224fe6"
 
 def get_google_leads(query, location):
@@ -11,25 +11,27 @@ def get_google_leads(query, location):
         "q": query,
         "location": location,
         "api_key": SERP_API_KEY,
-        "type": "search"
+        "type": "search",
+        "num": 20,      # Fetch up to 20 results
+        "hl": "en"      # English results
     }
 
-    response = requests.get(url, params=params)
-    
-    if response.status_code != 200:
-        raise Exception("Failed to get data from SerpAPI")
+    res = requests.get(url, params=params)
+    data = res.json()
 
-    data = response.json()
     leads = []
-
     for result in data.get("local_results", []):
-        lead = {
-            "name": result.get("title", "N/A"),
-            "address": result.get("address", "N/A"),
-            "phone": result.get("phone", "N/A"),
-            "website": result.get("website", "N/A"),
-            "description": result.get("description", "N/A"),
-        }
-        leads.append(lead)
+        address = result.get("address", "")
+        
+        # ✅ Filter to include only leads with exact location match
+        if location.lower() in address.lower():
+            lead = {
+                "name": result.get("title", "N/A"),
+                "phone": result.get("phone", "N/A"),
+                "address": address if address else "N/A",
+                "website": result.get("website", "N/A"),
+                "description": result.get("description", result.get("website", "No description"))
+            }
+            leads.append(lead)
 
     return leads
