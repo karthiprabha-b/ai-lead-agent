@@ -2,33 +2,44 @@ import streamlit as st
 import pandas as pd
 from scraper import get_google_leads
 from ai import classify_niche, generate_message
+import time
 
-st.set_page_config(page_title="AI Lead Generator", layout="centered")
+st.set_page_config(page_title="AI Lead Agent", layout="centered")
 
-st.title("🌍 AI-Powered Lead Generation Agent")
-st.markdown("Generate qualified leads for any industry + location using AI + Google")
+st.title("🌍 AI Lead Generation Agent")
+st.markdown("Get real-time leads + smart outreach messages using AI.")
 
-# --- User inputs
-industry = st.text_input("🔍 Enter Industry", "Wedding Planners")
-location = st.text_input("📍 Enter Location", "Dubai, UAE")
+# --- Input fields
+industry = st.text_input("🔍 Enter Industry (e.g. Wedding Planners)", "")
+location = st.text_input("📍 Enter Location (e.g. Dubai)", "")
 
 if st.button("🚀 Generate Leads"):
-    with st.spinner("Getting real leads and generating messages..."):
-        try:
-            leads = get_google_leads(industry, location)
+    if not industry or not location:
+        st.warning("Please fill both industry and location.")
+    else:
+        with st.spinner("Fetching leads & generating messages..."):
+            try:
+                leads = get_google_leads(industry, location)
 
-            # Run AI classification and messaging
-            for lead in leads:
-                lead["niche"] = classify_niche(lead["name"], lead.get("description", ""))
-                lead["message"] = generate_message(lead["niche"], lead["name"])
+                # Process each lead
+                for lead in leads:
+                    desc = lead.get("description", lead.get("website", ""))
+                    lead["niche"] = classify_niche(lead["name"], desc)
+                    lead["message"] = generate_message(lead["niche"], lead["name"])
 
-            df = pd.DataFrame(leads)
-            st.success(f"✅ {len(df)} leads generated!")
-            st.dataframe(df)
+                if leads:
+                    df = pd.DataFrame(leads)
+                    st.success(f"✅ {len(df)} leads generated!")
+                    st.dataframe(df)
 
-            # Allow export
-            csv = df.to_csv(index=False)
-            st.download_button("⬇️ Download Leads CSV", csv, "leads.csv", "text/csv")
+                    # Download CSV
+                    csv = df.to_csv(index=False)
+                    st.download_button("⬇️ Download CSV", csv, "leads.csv", "text/csv")
+                else:
+                    st.info("No leads found for this location and industry.")
+            except Exception as e:
+                st.error(f"❌ Error: {e}")
 
-        except Exception as e:
-            st.error(f"Error: {e}")
+# 🔁 Keep app alive on Render
+while True:
+    time.sleep(1)
